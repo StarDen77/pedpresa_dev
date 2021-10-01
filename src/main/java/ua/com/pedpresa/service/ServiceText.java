@@ -7,11 +7,10 @@ import ua.com.pedpresa.src.Props;
 
 import java.io.FileNotFoundException;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class ServiceText {
-    private static final String PUNCT = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+    private static final String PUNCT = "“!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
 
     public static void textExecute() throws FileNotFoundException {
         News news = null;
@@ -47,8 +46,18 @@ public class ServiceText {
 
                     String title = news.getTitle();
                     String content = Jsoup.clean(news.getContent(), Safelist.relaxed());
-////                String content = Jsoup.parse(news.getContent()).text();
                     String clearContent = content.substring(0, content.contains("<p>Читайте також") ? content.indexOf("<p>Читайте також") : content.length());
+//                    clearContent = clearContent.replace("&nbsp;"," &nbsp; ");
+//                    clearContent = clearContent.replace("<"," <");
+//                    clearContent = clearContent.replace(">","> ");
+
+                    ArrayList<String> strings = new ArrayList<>(List.of(clearContent.split("\\n")));
+                    for (String string : strings) {
+                        System.out.println(string);
+                        System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~");
+                    }
+
+
                     System.out.println(z);
                     System.out.println(title);
 
@@ -59,27 +68,50 @@ public class ServiceText {
 // ------------------------------------ parsing sentences -------------------------------------------
                     List<String> sentences = new ArrayList<>();
                     List<String> words = new ArrayList<>();
+                    Map<String, Integer> countWords = new HashMap<>();
 
-                    String mod_title = modificate(title,con);
+
+                    String mod_title = modificate(title, con);
                     System.out.println(mod_title);
                     System.out.println("");
                     System.out.println("");
 
-
+                    StringBuilder modPost = new StringBuilder();
+                    modPost.append(mod_title).append("\\n");
                     sentences = List.of(Jsoup.parse(clearContent).text().split("\\. "));
                     for (String sentence : sentences) {
                         System.out.println(sentence);
 
-                        String mod_sentence = modificate(sentence, con).replace("..",".");
+                        String mod_sentence = modificate(sentence, con).replace("..", ".");
 
                         System.out.println(mod_sentence);
+                        modPost.append(mod_sentence).append("\\n");
 
                         System.out.println("+++++++++++++++++++++++++++++++");
                     }
 
-                }
+                    //                    ---------------------------- list of words -----
+                    words = List.of(modPost.toString().split(" "));
+                    for (String word : words) {
+                        word = fSym(word).isEmpty() ? word : word.substring(1);
+                        word = lastSym(word).isEmpty() ? word : word.substring(0, word.length() - 1);
+//                        System.out.println(word);
+                        if (countWords.containsKey(word)) countWords.replace(word, countWords.get(word) + 1);
+                        else countWords.put(word, 1);
+                    }
+
+                    for (Map.Entry<String, Integer> entry : countWords.entrySet()) {
+                        if (entry.getValue() > 2 && entry.getKey().length() > 2)
+                            System.out.println(entry.getKey() + " == " + entry.getValue());
+                    }
+
+//                  ----------------------- end list of words
+
+
+                } // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! end of EXECUTOR
 
                 System.out.println("----------------------------------------------------");
+
 
 // ----------------------------- end of parsing sentences ------------------------------------
             }
@@ -118,109 +150,110 @@ public class ServiceText {
             lastS = "";
             fS = "";
 
+            if (words[i].charAt(0) == '“') {
+
+            }
+//            if(words[i].contains("<")) i++;
+
 
             if (words.length >= rm && i + rm <= words.length) {
+                fS = fSym(words[i]);
+                fW = fS.isEmpty() ? words[i] : words[i].substring(1);
+                lastS = lastSym(words[i + rm - 1]);
+                lastW = lastS.isEmpty() ? words[i + rm - 1] : words[i + rm - 1].substring(0, words[i + rm - 1].length() - 1);
 
-                if (lastSym(words[i+4]).isEmpty()){
-                  lastW = words[i+4];
-                }  else {
-                    lastW = words[i+4].substring(0,words[i+4].length()-1);
-                    lastS = lastSym(words[i+4]);
-                }
-                String searchString5 = words[i] + " " + words[i + 1] + " " + words[i + 2] + " " + words[i + 3] + " " + lastW;
+                String searchString5 = fW + " " + words[i + 1] + " " + words[i + 2] + " " + words[i + 3] + " " + lastW;
                 ps55.setString(1, searchString5);
                 ResultSet rs = ps55.executeQuery();
                 while (rs.next()) {
-                    mod_word = rs.getString(1)+lastS;
+                    mod_word = fS + rs.getString(1) + lastS;
                 }
                 rs.close();
             }
+            fS = "";
             lastS = "";
             rm--;
 
             if (mod_word.isEmpty()) {
                 if (words.length >= rm && i + rm <= words.length) { // --------- 4
-                    if (lastSym(words[i+3]).isEmpty()){
-                        lastW = words[i+3];
-                    }  else {
-                        lastW = words[i+3].substring(0,words[i+3].length()-1);
-                        lastS = lastSym(words[i+3]);
-                    }
-                    String searchString4 = words[i] + " " + words[i + 1] + " " + words[i + 2] + " " + lastW;
+                    fS = fSym(words[i]);
+                    fW = fS.isEmpty() ? words[i] : words[i].substring(1);
+                    lastS = lastSym(words[i + rm - 1]);
+                    lastW = lastS.isEmpty() ? words[i + rm - 1] : words[i + rm - 1].substring(0, words[i + rm - 1].length() - 1);
+                    String searchString4 = fW + " " + words[i + 1] + " " + words[i + 2] + " " + lastW;
                     ps54.setString(1, searchString4);
                     ResultSet rs = ps54.executeQuery();
                     while (rs.next()) {
-                        mod_word = rs.getString(1)+lastS;
+                        mod_word = fS + rs.getString(1) + lastS;
                     }
                     rs.close();
                 }
             } else {
-                i ++;
+                i++;
             }
+            fS = "";
             lastS = "";
             rm--;
 
             if (mod_word.isEmpty()) {
                 if (words.length >= rm && i + rm <= words.length) { // ---------- 3
-                    if (lastSym(words[i+2]).isEmpty()){
-                        lastW = words[i+2];
-                    }  else {
-                        lastW = words[i+2].substring(0,words[i+2].length()-1);
-                        lastS = lastSym(words[i+2]);
-                    }
-                    String searchString3 = words[i] + " " + words[i + 1] + " " + lastW;
+                    fS = fSym(words[i]);
+                    fW = fS.isEmpty() ? words[i] : words[i].substring(1);
+                    lastS = lastSym(words[i + rm - 1]);
+                    lastW = lastS.isEmpty() ? words[i + rm - 1] : words[i + rm - 1].substring(0, words[i + rm - 1].length() - 1);
+                    String searchString3 = fW + " " + words[i + 1] + " " + lastW;
                     ps53.setString(1, searchString3);
                     ResultSet rs = ps53.executeQuery();
                     while (rs.next()) {
-                        mod_word = rs.getString(1)+lastS;
+                        mod_word = fS + rs.getString(1) + lastS;
                     }
                     rs.close();
                 }
             } else {
-                i ++;
+                i++;
             }
+            fS = "";
             lastS = "";
             rm--;
 
             if (mod_word.isEmpty()) {
                 if (words.length >= rm && i + rm <= words.length) { // ---------- 2
-                    if (lastSym(words[i+1]).isEmpty()){
-                        lastW = words[i+1];
-                    }  else {
-                        lastW = words[i+1].substring(0,words[i+1].length()-1);
-                        lastS = lastSym(words[i+1]);
-                    }
-                    String searchString2 = words[i] + " " +lastW;
+                    fS = fSym(words[i]);
+                    fW = fS.isEmpty() ? words[i] : words[i].substring(1);
+                    lastS = lastSym(words[i + rm - 1]);
+                    lastW = lastS.isEmpty() ? words[i + rm - 1] : words[i + rm - 1].substring(0, words[i + rm - 1].length() - 1);
+                    String searchString2 = fW + " " + lastW;
                     ps52.setString(1, searchString2);
                     ResultSet rs = ps52.executeQuery();
                     while (rs.next()) {
-                        mod_word = rs.getString(1)+lastS;
+                        mod_word = fS + rs.getString(1) + lastS;
                     }
                     rs.close();
                 }
             } else {
-                i ++;
+                i++;
             }
+            fS = "";
             lastS = "";
             rm--;
 
             if (mod_word.isEmpty()) { // ------------- 1
-                if (lastSym(words[i]).isEmpty()){
-                    lastW = words[i];
-                }  else {
-                    lastW = words[i].substring(0,words[i].length()-1);
-                    lastS = lastSym(words[i]);
-                }
-                String searchString1 = lastW;
+
+                lastS = lastSym(words[i + rm - 1]);
+                lastW = lastS.isEmpty() ? words[i + rm - 1] : words[i + rm - 1].substring(0, words[i + rm - 1].length() - 1);
+                fS = fSym(lastW);
+                fW = fS.isEmpty() ? lastW : lastW.substring(1);
+                String searchString1 = fW;
                 ps51.setString(1, searchString1);
                 ResultSet rs = ps51.executeQuery();
                 while (rs.next()) {
-                    mod_word = rs.getString(1)+lastS;
+                    mod_word = fS + rs.getString(1) + lastS;
                 }
                 rs.close();
             } else {
-                i ++;
+                i++;
             }
+            fS = "";
             lastS = "";
             rm--;
 
@@ -235,7 +268,7 @@ public class ServiceText {
 
     public static String lastSym(String str) {
         String res = "";
-        char c = str.charAt(str.length()-1);
+        char c = str.charAt(str.length() - 1);
         if (PUNCT.indexOf(c) >= 0) {
             res = str.substring(str.length() - 1);
 //            System.out.println(str + " "+ res);
@@ -246,10 +279,12 @@ public class ServiceText {
     public static String fSym(String str) {
         String res = "";
         char c = str.charAt(0);
+//        System.out.println("--"+c+"--");
         if (PUNCT.indexOf(c) >= 0) {
-            res = str.substring(1);
-            System.out.println(str + " "+ res);
+            res = str.substring(0, 1);
+//            System.out.println(str + " "+ res);
         }
+
         return res;
     }
 
