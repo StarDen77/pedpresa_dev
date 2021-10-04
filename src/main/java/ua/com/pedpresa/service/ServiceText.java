@@ -1,7 +1,10 @@
 package ua.com.pedpresa.service;
 
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.safety.Safelist;
+import org.springframework.util.StringUtils;
 import ua.com.pedpresa.src.News;
 import ua.com.pedpresa.src.Props;
 
@@ -43,26 +46,58 @@ public class ServiceText {
                     newsList.add(news);
                     z++;
 
-
                     String title = news.getTitle();
                     String content = Jsoup.clean(news.getContent(), Safelist.relaxed());
-                    String clearContent = content.substring(0, content.contains("<p>Читайте також") ? content.indexOf("<p>Читайте також") : content.length());
-//                    clearContent = clearContent.replace("&nbsp;"," &nbsp; ");
-//                    clearContent = clearContent.replace("<"," <");
-//                    clearContent = clearContent.replace(">","> ");
+//                    String content = news.getContent().replace("  "," ").trim();
+                    String contWithoutRN = content.substring(0, content.contains("<p>Читайте також") ? content.indexOf("<p>Читайте також") : content.length());
+                    System.out.println(contWithoutRN);
+                    boolean endOfHref;
+                    List<String> strings = new ArrayList<>(List.of(contWithoutRN.split("\\n")));
 
-                    ArrayList<String> strings = new ArrayList<>(List.of(clearContent.split("\\n")));
                     for (String string : strings) {
-                        System.out.println(string);
+                        string = string.replace("<"," <");
+                        string = string.replace(">","> ");
+                        string = string.replace("&nbsp;","");
+                        string = string.replace("  "," ").trim();
+                        System.out.println(StringUtils.countOccurrencesOf(string," "));
+                        StringBuilder strA = new StringBuilder();
+                        List<String> allWords = List.of(string.split(" "));
+                        strA.append(allWords.size());
+                        for (int i = 0; i < allWords.size(); i++) {
+                            endOfHref  = true;
+//                            System.out.println(allWords.get(i));
+                            if(allWords.get(i).startsWith("<") && allWords.get(i).endsWith(">")) {
+                                strA.append(allWords.get(i)).append(i).append(";");
+                            }
+                            if(allWords.get(i).startsWith("<a") && allWords.get(i+1).startsWith("href")) {
+                                int q = 0;
+                                while (endOfHref) {
+                                    q++;
+//                                    System.out.println(allWords.get(i+q)+" "+q);
+                                    if (allWords.get(i+q).endsWith("/a>")) {
+                                        strA.append(allWords.get(i))
+                                                .append(" ")
+                                                .append(allWords.get(i+1))
+                                                .append(i).append("-")
+                                                .append(allWords.get(i+q))
+                                                .append(i+q);
+                                        endOfHref = false;
+                                    }
+                                }
+                            }
+                        }
+                        System.out.println(strA.toString());
+
+                        System.out.println("|"+string+"|");
                         System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~");
                     }
 
+// считаем количество слов всего + первый тег + позиция тега + ";" и т.д.
 
                     System.out.println(z);
                     System.out.println(title);
 
 
-//                    System.out.println(clearContent);
                     String titleMod = "";
                     String textMod = "";
 // ------------------------------------ parsing sentences -------------------------------------------
@@ -78,7 +113,7 @@ public class ServiceText {
 
                     StringBuilder modPost = new StringBuilder();
                     modPost.append(mod_title).append("\\n");
-                    sentences = List.of(Jsoup.parse(clearContent).text().split("\\. "));
+                    sentences = List.of(Jsoup.parse(contWithoutRN).text().split("\\. "));
                     for (String sentence : sentences) {
                         System.out.println(sentence);
 
@@ -288,6 +323,10 @@ public class ServiceText {
         return res;
     }
 
+    public String tagFinder(String str) {
+
+        return "";
+    }
 }
 
 
